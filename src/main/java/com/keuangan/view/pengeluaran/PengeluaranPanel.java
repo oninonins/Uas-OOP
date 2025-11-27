@@ -35,7 +35,7 @@ public class PengeluaranPanel extends JPanel {
     private JTable tableRiwayat;
     private DefaultTableModel tableModel;
 
-    private TransaksiRepo transaksiRepo; // sesuai permintaan
+    private TransaksiRepo transaksiRepo; 
 
     public PengeluaranPanel() {
         transaksiRepo = new TransaksiRepo();
@@ -46,7 +46,7 @@ public class PengeluaranPanel extends JPanel {
     private void initUI() {
         setLayout(new BorderLayout());
 
-        // ---------- FORM ----------
+        // form untuk inputan
         JPanel formPanel = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
 
@@ -95,7 +95,7 @@ public class PengeluaranPanel extends JPanel {
 
         add(formPanel, BorderLayout.NORTH);
 
-        // ---------- TABLE RIWAYAT ----------
+        // Riwayat pengeluaran
         String[] kolom = {"Tanggal", "Kategori", "Jumlah", "Keterangan"};
         tableModel = new DefaultTableModel(kolom, 0);
 
@@ -104,7 +104,7 @@ public class PengeluaranPanel extends JPanel {
 
         add(tableScroll, BorderLayout.CENTER);
 
-        // ---------- ACTION ----------
+        
         btnSimpan.addActionListener(e -> simpanPengeluaran());
     }
 
@@ -137,7 +137,7 @@ public class PengeluaranPanel extends JPanel {
             }
 
             String keterangan = taKeterangan.getText();
-            int userId = 1; // nanti ambil dari UserSession
+            int userId = 1; // nanti diganti dari user session
 
             boolean success = transaksiRepo.insertPengeluaran(
                     userId,
@@ -164,7 +164,7 @@ public class PengeluaranPanel extends JPanel {
     }
 
     private void loadRiwayat() {
-        tableModel.setRowCount(0); // clear
+        tableModel.setRowCount(0);
 
         int userId = 1; // nanti diganti dari session
         List<Map<String, Object>> data = transaksiRepo.getAllPengeluaran(userId);

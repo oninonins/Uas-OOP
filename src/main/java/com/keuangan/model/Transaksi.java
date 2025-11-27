@@ -5,7 +5,7 @@ public class Transaksi {
     private double amount;
     private String category;
     private String description;
-    private String transactionDate; // Tahun - Bulan - Hari
+    private String transactionDate; 
     private String type;
 
     public int getId() {

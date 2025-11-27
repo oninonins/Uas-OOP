@@ -21,12 +21,11 @@ public class MainFrame extends JFrame {
         cardLayout = new CardLayout();
         mainPanel = new JPanel(cardLayout);
 
-        // === Tambahkan Panel Pengeluaran ===
+        // Panel pengeluaran
         mainPanel.add(new PengeluaranPanel(), "pengeluaran");
 
         add(mainPanel);
 
-        // Tampilkan panel pengeluaran sebagai default dulu
         showPengeluaranPanel();
     }
 
