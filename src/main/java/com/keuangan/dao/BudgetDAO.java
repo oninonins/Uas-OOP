@@ -6,18 +6,29 @@ import com.keuangan.model.Budget;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
-
+import java.time.Year; 
 public class BudgetDAO {
     
     public boolean addBudget(Budget budget) {
-        String sql = "INSERT INTO budget (nama_budget, jumlah, bulan) VALUES (?, ?, ?)";
+        String sql = "INSERT INTO budgets (user_id, category, limit_amount, month, year, created_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            pstmt.setString(1, budget.getNamaBudget());
-            pstmt.setDouble(2, budget.getJumlah());
-            pstmt.setString(3, budget.getBulan());
+            pstmt.setInt(1, 1); 
+
+            pstmt.setString(2, budget.getNamaBudget());
+
+            pstmt.setDouble(3, budget.getJumlah());
+            
+            try {
+                pstmt.setInt(4, Integer.parseInt(budget.getBulan()));
+            } catch (NumberFormatException e) {
+                pstmt.setInt(4, 1); 
+                System.out.println("Warning: Format bulan salah, set ke 1");
+            }
+
+            pstmt.setInt(5, Year.now().getValue());
 
             pstmt.executeUpdate();
             return true;
@@ -30,18 +41,19 @@ public class BudgetDAO {
     
     public List<Budget> getAllBudget() {
         List<Budget> list = new ArrayList<>();
-        String sql = "SELECT id, nama_budget, jumlah, bulan FROM budget ORDER BY id ASC";
+        String sql = "SELECT id, category, limit_amount, month FROM budgets ORDER BY id ASC";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql);
              ResultSet rs = pstmt.executeQuery()) {
 
             while (rs.next()) {
+                
                 Budget budget = new Budget(
                         rs.getInt("id"),
-                        rs.getString("nama_budget"),
-                        rs.getDouble("jumlah"),
-                        rs.getString("bulan")
+                        rs.getString("category"),      
+                        rs.getDouble("limit_amount"),  
+                        String.valueOf(rs.getInt("month")) 
                 );
                 list.add(budget);
             }
@@ -54,14 +66,20 @@ public class BudgetDAO {
     }
 
     public boolean updateBudget(Budget budget) {
-        String sql = "UPDATE budget SET nama_budget=?, jumlah=?, bulan=? WHERE id=?";
+        String sql = "UPDATE budgets SET category=?, limit_amount=?, month=? WHERE id=?";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, budget.getNamaBudget());
             pstmt.setDouble(2, budget.getJumlah());
-            pstmt.setString(3, budget.getBulan());
+            
+            try {
+                pstmt.setInt(3, Integer.parseInt(budget.getBulan()));
+            } catch (NumberFormatException e) {
+                pstmt.setInt(3, 1);
+            }
+            
             pstmt.setInt(4, budget.getId());
 
             pstmt.executeUpdate();
@@ -74,7 +92,7 @@ public class BudgetDAO {
     }
 
     public boolean deleteBudget(int id) {
-        String sql = "DELETE FROM budget WHERE id=?";
+        String sql = "DELETE FROM budgets WHERE id=?";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -88,4 +106,4 @@ public class BudgetDAO {
             return false;
         }
     }
-}
+}   
