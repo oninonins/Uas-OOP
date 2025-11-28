@@ -59,6 +59,13 @@ public class MainForm extends JFrame {
         JButton btnStatistik = createMenuButton("Statistik", "Lihat statistik keuangan");
         JButton btnLaporan = createMenuButton("Laporan", "Generate laporan");
         
+        btnBudget.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                new BudgetForm().setVisible(true);
+            }
+        });
+
         contentPanel.add(btnTransaksi);
         contentPanel.add(btnBudget);
         contentPanel.add(btnStatistik);
