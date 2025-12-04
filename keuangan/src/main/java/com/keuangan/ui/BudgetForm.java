@@ -75,11 +75,6 @@ public class BudgetForm extends JFrame {
         btnUpdate.addActionListener(e -> updateBudget());
         add(btnUpdate);
 
-        JButton btnDelete = new JButton("Hapus");
-        btnDelete.setBounds(400, 160, 120, 30);
-        btnDelete.addActionListener(e -> deleteBudget());
-        add(btnDelete);
-
         // Table
         tableModel = new DefaultTableModel(new String[]{"ID", "Nama Budget", "Jumlah", "Bulan"}, 0);
         tableBudget = new JTable(tableModel);
