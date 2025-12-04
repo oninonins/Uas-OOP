@@ -1,6 +1,7 @@
 package com.keuangan.ui;
 
 import com.keuangan.model.User;
+import com.keuangan.view.login.LoginFrame;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -116,7 +117,7 @@ public class MainForm extends JFrame {
         
         if (confirm == JOptionPane.YES_OPTION) {
             this.dispose();
-            new LoginForm().setVisible(true);
+            new LoginFrame().setVisible(true);
         }
     }
 }
