@@ -2,6 +2,7 @@ package com.keuangan.ui;
 
 import com.keuangan.model.User;
 import com.keuangan.view.login.LoginFrame;
+import com.keuangan.ui.TransactionForm; 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -64,6 +65,19 @@ public class MainForm extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 new BudgetForm().setVisible(true);
+            }
+        });
+
+        for (ActionListener al : btnTransaksi.getActionListeners()) {
+            btnTransaksi.removeActionListener(al);
+        }
+
+        // 2. Tambahkan aksi baru untuk membuka TransactionForm
+        btnTransaksi.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // Pastikan class TransactionForm sudah di-import
+                new TransactionForm(currentUser).setVisible(true);
             }
         });
 

@@ -1,13 +1,23 @@
 package com.keuangan.ui;
 
+import java.awt.Font;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.util.List;
+
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
+import javax.swing.table.DefaultTableModel;
+
 import com.keuangan.dao.BudgetDAO;
 import com.keuangan.model.Budget;
-
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-import java.awt.*;
-import java.awt.event.*;
-import java.util.List;
 
 public class BudgetForm extends JFrame {
 
@@ -74,6 +84,11 @@ public class BudgetForm extends JFrame {
         btnUpdate.setBounds(400, 120, 120, 30);
         btnUpdate.addActionListener(e -> updateBudget());
         add(btnUpdate);
+
+        JButton btnHapus = new JButton("Hapus");
+        btnHapus.setBounds(400, 160, 120, 30);
+        btnHapus.addActionListener(e -> deleteBudget());
+        add(btnHapus);
 
         // Table
         tableModel = new DefaultTableModel(new String[]{"ID", "Nama Budget", "Jumlah", "Bulan"}, 0);
