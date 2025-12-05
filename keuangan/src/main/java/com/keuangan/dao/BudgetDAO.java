@@ -7,9 +7,9 @@ import java.sql.SQLException;
 import java.time.Year;
 import java.util.ArrayList;
 import java.util.List;
- 
 import com.keuangan.config.DatabaseConnection;
 import com.keuangan.model.Budget;
+
 public class BudgetDAO {
     
     public boolean addBudget(Budget budget) {
@@ -19,18 +19,9 @@ public class BudgetDAO {
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setInt(1, 1); 
-
             pstmt.setString(2, budget.getNamaBudget());
-
             pstmt.setDouble(3, budget.getJumlah());
-            
-            try {
-                pstmt.setInt(4, Integer.parseInt(budget.getBulan()));
-            } catch (NumberFormatException e) {
-                pstmt.setInt(4, 1); 
-                System.out.println("Warning: Format bulan salah, set ke 1");
-            }
-
+            pstmt.setString(4, budget.getBulan());
             pstmt.setInt(5, Year.now().getValue());
 
             pstmt.executeUpdate();
@@ -51,12 +42,12 @@ public class BudgetDAO {
              ResultSet rs = pstmt.executeQuery()) {
 
             while (rs.next()) {
-                
+
                 Budget budget = new Budget(
-                        rs.getInt("id"),
-                        rs.getString("category"),      
-                        rs.getDouble("limit_amount"),  
-                        String.valueOf(rs.getInt("month")) 
+                    rs.getInt("id"),
+                    rs.getString("category"),      
+                    rs.getDouble("limit_amount"),  
+                    rs.getString("month")  
                 );
                 list.add(budget);
             }
@@ -76,13 +67,7 @@ public class BudgetDAO {
 
             pstmt.setString(1, budget.getNamaBudget());
             pstmt.setDouble(2, budget.getJumlah());
-            
-            try {
-                pstmt.setInt(3, Integer.parseInt(budget.getBulan()));
-            } catch (NumberFormatException e) {
-                pstmt.setInt(3, 1);
-            }
-            
+            pstmt.setString(3, budget.getBulan());
             pstmt.setInt(4, budget.getId());
 
             pstmt.executeUpdate();
@@ -109,4 +94,4 @@ public class BudgetDAO {
             return false;
         }
     }
-}   
+}

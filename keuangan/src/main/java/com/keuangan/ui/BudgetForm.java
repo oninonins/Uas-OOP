@@ -1,196 +1,216 @@
 package com.keuangan.ui;
 
-import java.awt.Font;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.util.List;
-
-import javax.swing.JButton;
-import javax.swing.JComboBox;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JScrollPane;
-import javax.swing.JTable;
-import javax.swing.JTextField;
-import javax.swing.ListSelectionModel;
-import javax.swing.table.DefaultTableModel;
-
 import com.keuangan.dao.BudgetDAO;
 import com.keuangan.model.Budget;
+import com.keuangan.config.DatabaseConnection;
+
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import java.awt.event.*;
+import java.sql.Connection;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
 
 public class BudgetForm extends JFrame {
 
-    private JTextField txtNamaBudget, txtJumlah;
-    private JComboBox<String> cmbBulan;
-    private JTable tableBudget;
+    private JTextField txtNama, txtJumlah;
+    private JSpinner dateSpinner;   // DIGANTI DARI TEXTFIELD
+    private JButton btnTambah, btnUpdate, btnDelete, btnClear;
+    private JTable table;
     private DefaultTableModel tableModel;
 
     private BudgetDAO budgetDAO;
-    private int selectedBudgetId = -1; // Untuk update/delete
+    private int selectedId = -1;
+
+    private SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy");
 
     public BudgetForm() {
-        budgetDAO = new BudgetDAO();
-        initComponents();
-        loadBudgetData();
-    }
-
-    private void initComponents() {
-        setTitle("Manajemen Budget Bulanan");
-        setSize(600, 500);
-        setLocationRelativeTo(null);
+        setTitle("Manajemen Budget");
+        setSize(600, 450);
         setLayout(null);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setLocationRelativeTo(null);
 
-        JLabel lblTitle = new JLabel("BUDGET BULANAN");
-        lblTitle.setFont(new Font("Arial", Font.BOLD, 20));
-        lblTitle.setBounds(200, 20, 300, 30);
-        add(lblTitle);
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+            budgetDAO = new BudgetDAO();
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, "Koneksi gagal: " + e.getMessage());
+        }
+
+        // LABEL & INPUT ----------------------------------------------------
 
         JLabel lblNama = new JLabel("Nama Budget:");
-        lblNama.setBounds(50, 80, 120, 25);
+        lblNama.setBounds(30, 20, 140, 25);
         add(lblNama);
 
-        txtNamaBudget = new JTextField();
-        txtNamaBudget.setBounds(180, 80, 200, 25);
-        add(txtNamaBudget);
+        txtNama = new JTextField();
+        txtNama.setBounds(170, 20, 200, 25);
+        add(txtNama);
 
-        JLabel lblJumlah = new JLabel("Jumlah (Rp):");
-        lblJumlah.setBounds(50, 120, 120, 25);
+        JLabel lblJumlah = new JLabel("Jumlah:");
+        lblJumlah.setBounds(30, 60, 140, 25);
         add(lblJumlah);
 
         txtJumlah = new JTextField();
-        txtJumlah.setBounds(180, 120, 200, 25);
+        txtJumlah.setBounds(170, 60, 200, 25);
         add(txtJumlah);
 
-        JLabel lblBulan = new JLabel("Bulan:");
-        lblBulan.setBounds(50, 160, 120, 25);
-        add(lblBulan);
+        JLabel lblTanggal = new JLabel("Tanggal:");
+        lblTanggal.setBounds(30, 100, 180, 25);
+        add(lblTanggal);
 
-        String[] bulan = {
-                "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-                "Juli", "Agustus", "September", "Oktober", "November", "Desember"
-        };
-        cmbBulan = new JComboBox<>(bulan);
-        cmbBulan.setBounds(180, 160, 200, 25);
-        add(cmbBulan);
+        // --- DATE SPINNER DISINI ---
+        dateSpinner = new JSpinner(new SpinnerDateModel());
+        JSpinner.DateEditor dateEditor = new JSpinner.DateEditor(dateSpinner, "dd-MM-yyyy");
+        dateSpinner.setEditor(dateEditor);
+        dateSpinner.setBounds(170, 100, 200, 25);
+        add(dateSpinner);
 
-        JButton btnSimpan = new JButton("Simpan");
-        btnSimpan.setBounds(400, 80, 120, 30);
-        btnSimpan.addActionListener(e -> simpanBudget());
-        add(btnSimpan);
+        // BUTTONS ---------------------------------------------------------
+        btnTambah = new JButton("Tambah");
+        btnTambah.setBounds(30, 150, 100, 30);
+        add(btnTambah);
 
-        JButton btnUpdate = new JButton("Update");
-        btnUpdate.setBounds(400, 120, 120, 30);
-        btnUpdate.addActionListener(e -> updateBudget());
+        btnUpdate = new JButton("Update");
+        btnUpdate.setBounds(140, 150, 100, 30);
         add(btnUpdate);
 
-        JButton btnHapus = new JButton("Hapus");
-        btnHapus.setBounds(400, 160, 120, 30);
-        btnHapus.addActionListener(e -> deleteBudget());
-        add(btnHapus);
+        btnDelete = new JButton("Hapus");
+        btnDelete.setBounds(250, 150, 100, 30);
+        add(btnDelete);
 
-        // Table
-        tableModel = new DefaultTableModel(new String[]{"ID", "Nama Budget", "Jumlah", "Bulan"}, 0);
-        tableBudget = new JTable(tableModel);
-        tableBudget.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        btnClear = new JButton("Clear");
+        btnClear.setBounds(360, 150, 100, 30);
+        add(btnClear);
 
-        tableBudget.addMouseListener(new MouseAdapter() {
+        // TABLE ------------------------------------------------------------
+        tableModel = new DefaultTableModel(new String[]{"ID", "Nama", "Jumlah", "Tanggal"}, 0);
+        table = new JTable(tableModel);
+
+        JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane.setBounds(30, 200, 520, 180);
+        add(scrollPane);
+
+        // LOAD AWAL
+        loadTable();
+
+        // EVENTS ------------------------------------------------------------
+
+        btnTambah.addActionListener(e -> {
+            try {
+                String tgl = dateFormat.format((Date) dateSpinner.getValue());
+
+                Budget b = new Budget(
+                        0,
+                        txtNama.getText(),
+                        Double.parseDouble(txtJumlah.getText()),
+                        tgl
+                );
+
+                if (budgetDAO.addBudget(b)) {
+                    loadTable();
+                    resetForm();
+                } else {
+                    JOptionPane.showMessageDialog(null, "Gagal menambah budget.");
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(null, "Error tambah: " + ex.getMessage());
+            }
+        });
+
+        btnUpdate.addActionListener(e -> {
+            if (selectedId == -1) {
+                JOptionPane.showMessageDialog(null, "Pilih data dulu!");
+                return;
+            }
+            try {
+                String tgl = dateFormat.format((Date) dateSpinner.getValue());
+
+                Budget b = new Budget(
+                        selectedId,
+                        txtNama.getText(),
+                        Double.parseDouble(txtJumlah.getText()),
+                        tgl
+                );
+
+                if (budgetDAO.updateBudget(b)) {
+                    loadTable();
+                    resetForm();
+                } else {
+                    JOptionPane.showMessageDialog(null, "Gagal update budget.");
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(null, "Error update: " + ex.getMessage());
+            }
+        });
+
+        btnDelete.addActionListener(e -> {
+            if (selectedId == -1) {
+                JOptionPane.showMessageDialog(null, "Pilih data dulu!");
+                return;
+            }
+            try {
+                if (budgetDAO.deleteBudget(selectedId)) {
+                    loadTable();
+                    resetForm();
+                } else {
+                    JOptionPane.showMessageDialog(null, "Gagal hapus budget.");
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(null, "Error delete: " + ex.getMessage());
+            }
+        });
+
+        btnClear.addActionListener(e -> resetForm());
+
+        table.addMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent e) {
-                int row = tableBudget.getSelectedRow();
-                if (row != -1) {
-                    selectedBudgetId = (int) tableModel.getValueAt(row, 0);
-                    txtNamaBudget.setText(tableModel.getValueAt(row, 1).toString());
-                    txtJumlah.setText(tableModel.getValueAt(row, 2).toString());
-                    cmbBulan.setSelectedItem(tableModel.getValueAt(row, 3).toString());
+                int row = table.getSelectedRow();
+                selectedId = Integer.parseInt(table.getValueAt(row, 0).toString());
+                txtNama.setText(table.getValueAt(row, 1).toString());
+                txtJumlah.setText(table.getValueAt(row, 2).toString());
+
+                try {
+                    Date dt = dateFormat.parse(table.getValueAt(row, 3).toString());
+                    dateSpinner.setValue(dt);
+                } catch (Exception ex) {
+                    dateSpinner.setValue(new Date());
                 }
             }
         });
 
-        JScrollPane scrollPane = new JScrollPane(tableBudget);
-        scrollPane.setBounds(50, 220, 500, 200);
-        add(scrollPane);
+        setVisible(true);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     }
 
-    private void loadBudgetData() {
+    // LOAD TABLE ------------------------------------------------------------
+    private void loadTable() {
         tableModel.setRowCount(0);
-        List<Budget> budgets = budgetDAO.getAllBudget();
-
-        for (Budget b : budgets) {
-            tableModel.addRow(new Object[]{b.getId(), b.getNamaBudget(), b.getJumlah(), b.getBulan()});
-        }
-    }
-
-    private void simpanBudget() {
-        String nama = txtNamaBudget.getText().trim();
-        String jumlahStr = txtJumlah.getText().trim();
-        String bulan = cmbBulan.getSelectedItem().toString();
-
-        if (nama.isEmpty() || jumlahStr.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Input tidak boleh kosong!");
-            return;
-        }
-
-        double jumlah;
         try {
-            jumlah = Double.parseDouble(jumlahStr);
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Jumlah harus berupa angka!");
-            return;
-        }
-
-        Budget budget = new Budget(0, nama, jumlah, bulan);
-
-        if (budgetDAO.addBudget(budget)) {
-            JOptionPane.showMessageDialog(this, "Budget berhasil ditambahkan!");
-            loadBudgetData();
-            resetForm();
-        }
-    }
-
-    private void updateBudget() {
-        if (selectedBudgetId == -1) {
-            JOptionPane.showMessageDialog(this, "Pilih data di tabel dulu!");
-            return;
-        }
-
-        String nama = txtNamaBudget.getText().trim();
-        String jumlahStr = txtJumlah.getText().trim();
-        String bulan = cmbBulan.getSelectedItem().toString();
-
-        double jumlah = Double.parseDouble(jumlahStr);
-
-        Budget budget = new Budget(selectedBudgetId, nama, jumlah, bulan);
-
-        if (budgetDAO.updateBudget(budget)) {
-            JOptionPane.showMessageDialog(this, "Data berhasil diupdate!");
-            loadBudgetData();
-            resetForm();
-        }
-    }
-
-    private void deleteBudget() {
-        if (selectedBudgetId == -1) {
-            JOptionPane.showMessageDialog(this, "Pilih data dulu!");
-            return;
-        }
-
-        int confirm = JOptionPane.showConfirmDialog(this,
-                "Yakin ingin menghapus data?", "Konfirmasi", JOptionPane.YES_NO_OPTION);
-
-        if (confirm == JOptionPane.YES_OPTION) {
-            if (budgetDAO.deleteBudget(selectedBudgetId)) {
-                JOptionPane.showMessageDialog(this, "Data berhasil dihapus!");
-                loadBudgetData();
-                resetForm();
+            List<Budget> list = budgetDAO.getAllBudget();
+            for (Budget b : list) {
+                tableModel.addRow(new Object[]{
+                        b.getId(),
+                        b.getNamaBudget(),
+                        b.getJumlah(),
+                        b.getBulan()
+                });
             }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, "Gagal load table: " + e.getMessage());
         }
     }
 
+    // RESET --------------------------------------------------------------
     private void resetForm() {
-        txtNamaBudget.setText("");
+        txtNama.setText("");
         txtJumlah.setText("");
-        cmbBulan.setSelectedIndex(0);
-        selectedBudgetId = -1;
+        dateSpinner.setValue(new Date());
+        selectedId = -1;
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> new BudgetForm());
     }
 }
