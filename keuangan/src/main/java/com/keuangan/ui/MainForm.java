@@ -111,14 +111,14 @@ public class MainForm extends JFrame {
             }
         });
         
-        button.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                JOptionPane.showMessageDialog(MainForm.this, 
-                    "Fitur " + title + " akan segera tersedia!", 
-                    "Info", 
-                    JOptionPane.INFORMATION_MESSAGE);
-            }
-        });
+        // button.addActionListener(new ActionListener() {
+        //     public void actionPerformed(ActionEvent e) {
+        //         JOptionPane.showMessageDialog(MainForm.this, 
+        //             "Fitur " + title + " akan segera tersedia!", 
+        //             "Info", 
+        //             JOptionPane.INFORMATION_MESSAGE);
+        //     }
+        // });
         
         return button;
     }
