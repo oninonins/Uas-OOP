@@ -56,7 +56,7 @@ public class MainForm extends JFrame {
         JButton btnLaporan = createMenuButton("Laporan", "Generate laporan");
 
         // OPEN BUDGET FORM
-        btnBudget.addActionListener(e -> new BudgetForm().setVisible(true));
+        btnBudget.addActionListener(e -> new BudgetForm(currentUser).setVisible(true));
 
         // OPEN TRANSACTION FORM
         for (ActionListener al : btnTransaksi.getActionListeners()) {

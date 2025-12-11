@@ -220,7 +220,7 @@ public class TransactionForm extends JFrame {
         
         for (Budget b : budgets) {
             // Masukkan ke dropdown sebagai object BudgetOption
-            cmbSumberDana.addItem(new BudgetOption(b.getId(), b.getNamaBudget(), b.getJumlah()));
+            cmbSumberDana.addItem(new BudgetOption(b.getUserId(), b.getBudgetId(), b.()));
         }
     }
     

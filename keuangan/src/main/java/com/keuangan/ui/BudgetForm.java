@@ -1,216 +1,156 @@
 package com.keuangan.ui;
 
-import com.keuangan.dao.BudgetDAO;
-import com.keuangan.model.Budget;
+import com.keuangan.model.User;
 import com.keuangan.config.DatabaseConnection;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
-import java.awt.event.*;
-import java.sql.Connection;
-import java.text.SimpleDateFormat;
+
+import java.sql.*;
 import java.util.Date;
-import java.util.List;
 
 public class BudgetForm extends JFrame {
 
-    private JTextField txtNama, txtJumlah;
-    private JSpinner dateSpinner;   // DIGANTI DARI TEXTFIELD
-    private JButton btnTambah, btnUpdate, btnDelete, btnClear;
+    private User currentUser;
+
+    private JComboBox<String> cmbKategori;
+    private JTextField txtJumlah;
+    private JSpinner dateSpinner;
+
     private JTable table;
-    private DefaultTableModel tableModel;
+    private DefaultTableModel model;
 
-    private BudgetDAO budgetDAO;
-    private int selectedId = -1;
+    public BudgetForm(User user) {
+        this.currentUser = user;
 
-    private SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy");
-
-    public BudgetForm() {
         setTitle("Manajemen Budget");
-        setSize(600, 450);
+        setSize(620, 560);
         setLayout(null);
         setLocationRelativeTo(null);
 
-        try {
-            Connection conn = DatabaseConnection.getConnection();
-            budgetDAO = new BudgetDAO();
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(null, "Koneksi gagal: " + e.getMessage());
-        }
+        initUI();
+        loadData();
+    }
 
-        // LABEL & INPUT ----------------------------------------------------
-
-        JLabel lblNama = new JLabel("Nama Budget:");
-        lblNama.setBounds(30, 20, 140, 25);
-        add(lblNama);
-
-        txtNama = new JTextField();
-        txtNama.setBounds(170, 20, 200, 25);
-        add(txtNama);
+    private void initUI() {
 
         JLabel lblJumlah = new JLabel("Jumlah:");
-        lblJumlah.setBounds(30, 60, 140, 25);
+        lblJumlah.setBounds(50, 30, 150, 25);
         add(lblJumlah);
 
         txtJumlah = new JTextField();
-        txtJumlah.setBounds(170, 60, 200, 25);
+        txtJumlah.setBounds(200, 30, 200, 25);
         add(txtJumlah);
 
+        JLabel lblKategori = new JLabel("Kategori:");
+        lblKategori.setBounds(50, 70, 150, 25);
+        add(lblKategori);
+
+        cmbKategori = new JComboBox<>(new String[]{
+                "Makan & Minum",
+                "Transportasi",
+                "Belanja",
+                "Hiburan",
+                "Tagihan",
+                "Kesehatan",
+                "Lainnya"
+        });
+        cmbKategori.setBounds(200, 70, 200, 25);
+        add(cmbKategori);
+
         JLabel lblTanggal = new JLabel("Tanggal:");
-        lblTanggal.setBounds(30, 100, 180, 25);
+        lblTanggal.setBounds(50, 110, 150, 25);
         add(lblTanggal);
 
-        // --- DATE SPINNER DISINI ---
+        // DATE PICKER yang kamu minta (dd-MM-yyyy)
         dateSpinner = new JSpinner(new SpinnerDateModel());
-        JSpinner.DateEditor dateEditor = new JSpinner.DateEditor(dateSpinner, "dd-MM-yyyy");
-        dateSpinner.setEditor(dateEditor);
-        dateSpinner.setBounds(170, 100, 200, 25);
+        JSpinner.DateEditor editor = new JSpinner.DateEditor(dateSpinner, "dd-MM-yyyy");
+        dateSpinner.setEditor(editor);
+        dateSpinner.setBounds(200, 110, 200, 25);
         add(dateSpinner);
 
-        // BUTTONS ---------------------------------------------------------
-        btnTambah = new JButton("Tambah");
-        btnTambah.setBounds(30, 150, 100, 30);
-        add(btnTambah);
+        JButton btnSave = new JButton("Tambah Budget");
+        btnSave.setBounds(200, 160, 150, 30);
+        add(btnSave);
 
-        btnUpdate = new JButton("Update");
-        btnUpdate.setBounds(140, 150, 100, 30);
-        add(btnUpdate);
+        btnSave.addActionListener(e -> saveData());
 
-        btnDelete = new JButton("Hapus");
-        btnDelete.setBounds(250, 150, 100, 30);
-        add(btnDelete);
+        model = new DefaultTableModel(new Object[]{"ID", "Kategori", "Jumlah", "Tanggal"}, 0);
+        table = new JTable(model);
 
-        btnClear = new JButton("Clear");
-        btnClear.setBounds(360, 150, 100, 30);
-        add(btnClear);
-
-        // TABLE ------------------------------------------------------------
-        tableModel = new DefaultTableModel(new String[]{"ID", "Nama", "Jumlah", "Tanggal"}, 0);
-        table = new JTable(tableModel);
-
-        JScrollPane scrollPane = new JScrollPane(table);
-        scrollPane.setBounds(30, 200, 520, 180);
-        add(scrollPane);
-
-        // LOAD AWAL
-        loadTable();
-
-        // EVENTS ------------------------------------------------------------
-
-        btnTambah.addActionListener(e -> {
-            try {
-                String tgl = dateFormat.format((Date) dateSpinner.getValue());
-
-                Budget b = new Budget(
-                        0,
-                        txtNama.getText(),
-                        Double.parseDouble(txtJumlah.getText()),
-                        tgl
-                );
-
-                if (budgetDAO.addBudget(b)) {
-                    loadTable();
-                    resetForm();
-                } else {
-                    JOptionPane.showMessageDialog(null, "Gagal menambah budget.");
-                }
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(null, "Error tambah: " + ex.getMessage());
-            }
-        });
-
-        btnUpdate.addActionListener(e -> {
-            if (selectedId == -1) {
-                JOptionPane.showMessageDialog(null, "Pilih data dulu!");
-                return;
-            }
-            try {
-                String tgl = dateFormat.format((Date) dateSpinner.getValue());
-
-                Budget b = new Budget(
-                        selectedId,
-                        txtNama.getText(),
-                        Double.parseDouble(txtJumlah.getText()),
-                        tgl
-                );
-
-                if (budgetDAO.updateBudget(b)) {
-                    loadTable();
-                    resetForm();
-                } else {
-                    JOptionPane.showMessageDialog(null, "Gagal update budget.");
-                }
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(null, "Error update: " + ex.getMessage());
-            }
-        });
-
-        btnDelete.addActionListener(e -> {
-            if (selectedId == -1) {
-                JOptionPane.showMessageDialog(null, "Pilih data dulu!");
-                return;
-            }
-            try {
-                if (budgetDAO.deleteBudget(selectedId)) {
-                    loadTable();
-                    resetForm();
-                } else {
-                    JOptionPane.showMessageDialog(null, "Gagal hapus budget.");
-                }
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(null, "Error delete: " + ex.getMessage());
-            }
-        });
-
-        btnClear.addActionListener(e -> resetForm());
-
-        table.addMouseListener(new MouseAdapter() {
-            public void mouseClicked(MouseEvent e) {
-                int row = table.getSelectedRow();
-                selectedId = Integer.parseInt(table.getValueAt(row, 0).toString());
-                txtNama.setText(table.getValueAt(row, 1).toString());
-                txtJumlah.setText(table.getValueAt(row, 2).toString());
-
-                try {
-                    Date dt = dateFormat.parse(table.getValueAt(row, 3).toString());
-                    dateSpinner.setValue(dt);
-                } catch (Exception ex) {
-                    dateSpinner.setValue(new Date());
-                }
-            }
-        });
-
-        setVisible(true);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        JScrollPane scroll = new JScrollPane(table);
+        scroll.setBounds(50, 220, 500, 300);
+        add(scroll);
     }
 
-    // LOAD TABLE ------------------------------------------------------------
-    private void loadTable() {
-        tableModel.setRowCount(0);
-        try {
-            List<Budget> list = budgetDAO.getAllBudget();
-            for (Budget b : list) {
-                tableModel.addRow(new Object[]{
-                        b.getId(),
-                        b.getNamaBudget(),
-                        b.getJumlah(),
-                        b.getBulan()
-                });
-            }
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(null, "Gagal load table: " + e.getMessage());
+    private int convertKategoriToId(String kategoriName) {
+        if (kategoriName == null) return 7;
+
+        switch (kategoriName) {
+            case "Makan & Minum": return 1;
+            case "Transportasi": return 2;
+            case "Belanja": return 3;
+            case "Hiburan": return 4;
+            case "Tagihan": return 5;
+            case "Kesehatan": return 6;
+            default: return 7;
         }
     }
 
-    // RESET --------------------------------------------------------------
-    private void resetForm() {
-        txtNama.setText("");
-        txtJumlah.setText("");
-        dateSpinner.setValue(new Date());
-        selectedId = -1;
+    private void saveData() {
+
+        Date selectedDate = (Date) dateSpinner.getValue();
+        java.sql.Date sqlDate = new java.sql.Date(selectedDate.getTime());
+
+        try (Connection conn = DatabaseConnection.getConnection()) {
+
+            String sql = "INSERT INTO budgets (user_id, category_id, amount, created_at) VALUES (?, ?, ?, ?)";
+
+            PreparedStatement stmt = conn.prepareStatement(sql);
+
+            stmt.setInt(1, currentUser.getId());
+            stmt.setInt(2, convertKategoriToId(cmbKategori.getSelectedItem().toString()));
+            stmt.setDouble(3, Double.parseDouble(txtJumlah.getText()));
+            stmt.setDate(4, sqlDate);  // SIMPAN TANGGAL
+
+            stmt.executeUpdate();
+
+            JOptionPane.showMessageDialog(this, "Budget berhasil ditambahkan!");
+            loadData();
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Error insert: " + e.getMessage());
+        }
     }
 
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new BudgetForm());
+    private void loadData() {
+        model.setRowCount(0);
+
+        try (Connection conn = DatabaseConnection.getConnection()) {
+
+            String sql =
+                    "SELECT b.budget_id, c.name AS category, b.amount, b.created_at " +
+                    "FROM budgets b " +
+                    "JOIN categories c ON b.category_id = c.category_id " +
+                    "WHERE b.user_id = ? " +
+                    "ORDER BY b.created_at DESC";
+
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setInt(1, currentUser.getId());
+
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                model.addRow(new Object[]{
+                        rs.getInt("budget_id"),
+                        rs.getString("category"),
+                        rs.getDouble("amount"),
+                        rs.getDate("created_at")  // TAMPILKAN TANGGAL
+                });
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Error load: " + e.getMessage());
+        }
     }
 }

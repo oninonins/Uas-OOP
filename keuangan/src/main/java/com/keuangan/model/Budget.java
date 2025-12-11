@@ -3,46 +3,33 @@ package com.keuangan.model;
 import java.time.LocalDateTime;
 
 public class Budget {
-    private int id;
-    private String namaBudget;
-    private double jumlah;
-    private String bulan;
-    private int tahun;
+
+    private int budgetId;
+    private int userId;
+    private int categoryId;
+    private double amount;
     private LocalDateTime createdAt;
 
-    public Budget() {}
-
-    public Budget(int id, String namaBudget, double jumlah, String bulan) {
-        this.id = id;
-        this.namaBudget = namaBudget;
-        this.jumlah = jumlah;
-        this.bulan = bulan;
-    }
-
-    public Budget(int id, String namaBudget, double jumlah, String bulan, int tahun, LocalDateTime createdAt) {
-        this.id = id;
-        this.namaBudget = namaBudget;
-        this.jumlah = jumlah;
-        this.bulan = bulan;
-        this.tahun = tahun;
+    public Budget(int budgetId, int userId, int categoryId, double amount, LocalDateTime createdAt) {
+        this.budgetId = budgetId;
+        this.userId = userId;
+        this.categoryId = categoryId;
+        this.amount = amount;
         this.createdAt = createdAt;
     }
 
-    public int getId() { return id; }
-    public void setId(int id) { this.id = id; }
+    public Budget(int userId, int categoryId, double amount) {
+        this.userId = userId;
+        this.categoryId = categoryId;
+        this.amount = amount;
+    }
 
-    public String getNamaBudget() { return namaBudget; }
-    public void setNamaBudget(String namaBudget) { this.namaBudget = namaBudget; }
-
-    public double getJumlah() { return jumlah; }
-    public void setJumlah(double jumlah) { this.jumlah = jumlah; }
-
-    public String getBulan() { return bulan; }
-    public void setBulan(String bulan) { this.bulan = bulan; }
-
-    public int getTahun() { return tahun; }
-    public void setTahun(int tahun) { this.tahun = tahun; }
-
+    public int getBudgetId() { return budgetId; }
+    public int getUserId() { return userId; }
+    public int getCategoryId() { return categoryId; }
+    public double getAmount() { return amount; }
     public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public void setCategoryId(int categoryId) { this.categoryId = categoryId; }
+    public void setAmount(double amount) { this.amount = amount; }
 }

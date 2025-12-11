@@ -27,11 +27,12 @@ CREATE INDEX idx_users_username ON users(username);
 -- ==========================================
 CREATE TABLE categories (
     category_id SERIAL PRIMARY KEY,
-    user_id INT REFERENCES users(user_id) ON DELETE CASCADE,
+    user_id INT REFERENCES users(id) ON DELETE CASCADE,
     name VARCHAR(50) NOT NULL,
-    icon VARCHAR(50), 
+    icon VARCHAR(50),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
 
 -- Index agar cepat saat meload list kategori milik user tertentu
 CREATE INDEX idx_categories_user ON categories(user_id);
@@ -47,13 +48,8 @@ CREATE TABLE budgets (
     amount DECIMAL(15, 2) NOT NULL,
     
     -- Menggunakan Rentang Tanggal
-    start_date DATE NOT NULL, 
-    end_date DATE NOT NULL,   
-    
+    budget_date DATE DEFAULT CURRENT_DATE, 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
-    -- Validasi: Tanggal selesai harus >= tanggal mulai
-    CHECK (end_date >= start_date)
 );
 
 -- Index Penting untuk Reporting:
