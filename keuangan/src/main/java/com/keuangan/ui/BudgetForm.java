@@ -28,6 +28,7 @@ public class BudgetForm extends JFrame {
     private User currentUser;
 
     private javax.swing.JComboBox<CategoryItem> cmbKategori;
+    private JButton btnTambahKategori;
     private JTextField txtJumlah;
     private JSpinner dateSpinner;
 
@@ -83,6 +84,11 @@ public class BudgetForm extends JFrame {
         cmbKategori.setBounds(200, 70, 200, 25);
         add(cmbKategori);
 
+        btnTambahKategori = new JButton("Tambah Kategori");
+        btnTambahKategori.setBounds(420, 70, 150, 25);
+        btnTambahKategori.addActionListener(e -> openCategoryForm());
+        add(btnTambahKategori);
+
         JLabel lblTanggal = new JLabel("Tanggal:");
         lblTanggal.setBounds(50, 110, 150, 25);
         add(lblTanggal);
@@ -110,9 +116,14 @@ public class BudgetForm extends JFrame {
         loadCategories();
     }
 
+    private void openCategoryForm() {
+        CategoryForm form = new CategoryForm(this, currentUser, this::loadCategories);
+        form.setVisible(true);
+    }
+
     private void loadCategories() {
         cmbKategori.removeAllItems();
-        List<Category> categories = categoryDAO.getAllCategories();
+        List<Category> categories = categoryDAO.getAllByUser(currentUser.getId());
         if (categories.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Kategori belum tersedia di database. Tambahkan kategori terlebih dahulu.");
             return;

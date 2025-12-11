@@ -5,9 +5,7 @@ import java.awt.Font;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.sql.Date;
-import java.text.NumberFormat;
 import java.util.List;
-import java.util.Locale;
 
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -21,62 +19,52 @@ import javax.swing.JTextField;
 import javax.swing.SpinnerDateModel;
 import javax.swing.table.DefaultTableModel;
 
-import com.keuangan.dao.BudgetDAO;
+import com.keuangan.dao.CategoryDAO;
 import com.keuangan.dao.TransactionDAO;
-import com.keuangan.model.Budget;
+import com.keuangan.model.Category;
 import com.keuangan.model.Transaction;
 import com.keuangan.model.User;
 
-// --- CLASS BANTUAN (Helper) ---
-// Agar ComboBox bisa menyimpan ID Budget, Nama, dan Saldonya sekaligus
-class BudgetOption {
+// Helper agar ComboBox kategori menyimpan ID & nama
+class CategoryItem {
     int id;
     String name;
-    double saldo;
 
-    public BudgetOption(int id, String name, double saldo) {
+    CategoryItem(int id, String name) {
         this.id = id;
         this.name = name;
-        this.saldo = saldo;
     }
 
-    // Ini yang akan tampil di tulisan Dropdown
     @Override
     public String toString() {
-        NumberFormat nf = NumberFormat.getInstance(new Locale("id", "ID"));
-        return name + " (Sisa: Rp " + nf.format(saldo) + ")";
+        return name;
     }
 }
 
 public class TransactionForm extends JFrame {
 
     // Komponen UI
-    private JComboBox<BudgetOption> cmbSumberDana; // Dropdown Sumber Uang (Dari DB Budget)
-    private JComboBox<String> cmbKategoriPengeluaran; // Dropdown Buat Apa (Manual/Editable)
+    private JComboBox<CategoryItem> cmbKategori; // Dropdown kategori dari DB
     
-    private JTextField txtAmount, txtDesc;
+    private JTextField txtSisa, txtAmount, txtDesc;
     private JSpinner dateSpinner;
-    private JLabel lblSisaSaldo; 
     
     private JTable tableTrx;
     private DefaultTableModel tableModel;
 
     // Logic / DAO
     private TransactionDAO trxDAO;
-    private BudgetDAO budgetDAO;
+    private CategoryDAO categoryDAO;
     private User currentUser; 
     private int selectedTrxId = -1;
     
-    private NumberFormat currencyFormat;
-
     public TransactionForm(User user) {
         this.currentUser = user;
         trxDAO = new TransactionDAO();
-        budgetDAO = new BudgetDAO();
-        currencyFormat = NumberFormat.getCurrencyInstance(new Locale("id", "ID"));
+        categoryDAO = new CategoryDAO();
         
         initComponents();
-        loadSumberDana(); // Load data Budget ke Dropdown 1
+        loadCategories();
         loadTableData();  // Load data Transaksi ke Tabel
     }
 
@@ -92,52 +80,37 @@ public class TransactionForm extends JFrame {
         lblTitle.setBounds(300, 20, 300, 30);
         add(lblTitle);
 
-        // --- 1. SUMBER DANA (Dari Budget Mana?) ---
-        JLabel lblSource = new JLabel("Ambil Uang Dari:");
-        lblSource.setBounds(50, 70, 150, 25);
-        add(lblSource);
-
-        cmbSumberDana = new JComboBox<>();
-        cmbSumberDana.setBounds(200, 70, 250, 25);
-        // Event: Saat sumber dana dipilih, update label info saldo
-        cmbSumberDana.addActionListener(e -> updateInfoSaldo());
-        add(cmbSumberDana);
-
-        // Label Info Saldo (Validasi Visual)
-        JLabel lblInfo = new JLabel("Sisa:");
-        lblInfo.setBounds(470, 70, 50, 25);
-        add(lblInfo);
-
-        lblSisaSaldo = new JLabel("Rp 0");
-        lblSisaSaldo.setFont(new Font("Arial", Font.BOLD, 14));
-        lblSisaSaldo.setForeground(new Color(0, 128, 0));
-        lblSisaSaldo.setBounds(510, 70, 200, 25);
-        add(lblSisaSaldo);
-
-        // --- 2. TANGGAL ---
+        // --- 1. TANGGAL ---
         JLabel lblDate = new JLabel("Tanggal:");
-        lblDate.setBounds(50, 110, 150, 25);
+        lblDate.setBounds(50, 70, 150, 25);
         add(lblDate);
 
         dateSpinner = new JSpinner(new SpinnerDateModel());
         JSpinner.DateEditor dateEditor = new JSpinner.DateEditor(dateSpinner, "dd-MM-yyyy");
         dateSpinner.setEditor(dateEditor);
-        dateSpinner.setBounds(200, 110, 150, 25);
+        dateSpinner.setBounds(200, 70, 150, 25);
         add(dateSpinner);
 
-        // --- 3. KEPERLUAN (Kategori Pengeluaran) ---
-        JLabel lblCat = new JLabel("Untuk Keperluan:");
-        lblCat.setBounds(50, 150, 150, 25);
-        add(lblCat);
+        // --- 2. KATEGORI ---
+        JLabel lblBudget = new JLabel("Kategori:");
+        lblBudget.setBounds(50, 110, 150, 25);
+        add(lblBudget);
 
-        // Isi default kategori pengeluaran umum
-        String[] expenses = {"Makan & Minum", "Bensin / Transport", "Belanja Harian", "Tagihan Listrik/Air", "Pulsa/Internet", "Hiburan", "Sedekah", "Lain-lain"};
-        cmbKategoriPengeluaran = new JComboBox<>(expenses);
-        cmbKategoriPengeluaran.setEditable(true); // PENTING: User bisa ketik manual jika tidak ada di list
-        cmbKategoriPengeluaran.setBounds(200, 150, 250, 25);
-        add(cmbKategoriPengeluaran);
+        cmbKategori = new JComboBox<>();
+        cmbKategori.setBounds(200, 110, 250, 25);
+        cmbKategori.addActionListener(e -> updateSisaSaldo());
+        add(cmbKategori);
 
-        // --- 4. NOMINAL ---
+        JLabel lblSisa = new JLabel("Sisa Saldo:");
+        lblSisa.setBounds(50, 150, 150, 25);
+        add(lblSisa);
+
+        txtSisa = new JTextField();
+        txtSisa.setBounds(200, 150, 250, 25);
+        txtSisa.setEditable(false);
+        add(txtSisa);
+
+        // --- 3. NOMINAL ---
         JLabel lblAmount = new JLabel("Nominal (Rp):");
         lblAmount.setBounds(50, 190, 150, 25);
         add(lblAmount);
@@ -146,7 +119,7 @@ public class TransactionForm extends JFrame {
         txtAmount.setBounds(200, 190, 250, 25);
         add(txtAmount);
 
-        // --- 5. DESKRIPSI ---
+        // --- 4. DESKRIPSI ---
         JLabel lblDesc = new JLabel("Keterangan:");
         lblDesc.setBounds(50, 230, 150, 25);
         add(lblDesc);
@@ -174,8 +147,7 @@ public class TransactionForm extends JFrame {
         add(btnReset);
 
         // --- TABLE ---
-        // Kolom ditambah untuk menampilkan Sumber Dana dan Keperluan
-        String[] cols = {"ID", "Tanggal", "Sumber Dana", "Keperluan", "Nominal", "Ket"};
+        String[] cols = {"ID", "Tanggal", "Kategori", "Nominal", "Ket"};
         tableModel = new DefaultTableModel(cols, 0);
         tableTrx = new JTable(tableModel);
         
@@ -194,18 +166,12 @@ public class TransactionForm extends JFrame {
                     Date sqlDate = (Date) tableModel.getValueAt(row, 1);
                     dateSpinner.setValue(new java.util.Date(sqlDate.getTime()));
                     
-                    // Set Keperluan (Kategori Pengeluaran)
-                    String kategoriPengeluaran = tableModel.getValueAt(row, 3).toString();
-                    cmbKategoriPengeluaran.setSelectedItem(kategoriPengeluaran);
+                    String catName = tableModel.getValueAt(row, 2).toString();
+                    cmbKategori.setSelectedItem(catName);
                     
-                    // Set Nominal
-                    txtAmount.setText(tableModel.getValueAt(row, 4).toString().replace(".0", ""));
-                    
-                    // Set Deskripsi
-                    txtDesc.setText(tableModel.getValueAt(row, 5).toString());
-                    
-                    // NOTE: Untuk cmbSumberDana agak tricky set-nya karena object, 
-                    // tapi biarkan user memilih ulang sumber dana jika ingin edit demi keamanan saldo.
+                    txtAmount.setText(tableModel.getValueAt(row, 3).toString().replace(".0", ""));
+                    txtDesc.setText(tableModel.getValueAt(row, 4).toString());
+                    updateSisaSaldo();
                 }
             }
         });
@@ -213,42 +179,36 @@ public class TransactionForm extends JFrame {
 
     // --- LOGIC METHOD ---
 
-    private void loadSumberDana() {
-        cmbSumberDana.removeAllItems();
-        // Mengambil semua budget user dari database
-        List<Budget> budgets = budgetDAO.getAllBudget(currentUser.getId()); 
-        
-        for (Budget b : budgets) {
-            // Masukkan ke dropdown sebagai object BudgetOption
-            String budgetName = "Budget #" + b.getBudgetId();
-            cmbSumberDana.addItem(new BudgetOption(b.getBudgetId(), budgetName, b.getAmount()));
+    private void loadCategories() {
+        cmbKategori.removeAllItems();
+        List<Category> categories = categoryDAO.getAllByUser(currentUser.getId());
+        for (Category c : categories) {
+            cmbKategori.addItem(new CategoryItem(c.getCategoryId(), c.getName()));
         }
+        updateSisaSaldo();
     }
-    
-    private void updateInfoSaldo() {
-        BudgetOption selected = (BudgetOption) cmbSumberDana.getSelectedItem();
-        if (selected != null) {
-            lblSisaSaldo.setText(currencyFormat.format(selected.saldo));
-            
-            if (selected.saldo <= 0) {
-                lblSisaSaldo.setForeground(Color.RED);
-            } else {
-                lblSisaSaldo.setForeground(new Color(0, 128, 0));
-            }
+
+    private void updateSisaSaldo() {
+        CategoryItem selected = (CategoryItem) cmbKategori.getSelectedItem();
+        if (selected == null) {
+            txtSisa.setText("");
+            return;
         }
+        int totalBudget = trxDAO.getTotalBudgetByCategoryId(selected.id);
+        int totalPengeluaran = trxDAO.getTotalPengeluaranByCategoryId(selected.id);
+        int sisa = totalBudget - totalPengeluaran;
+        txtSisa.setText(String.valueOf(sisa));
     }
 
     private void loadTableData() {
         tableModel.setRowCount(0);
-        // Pastikan TransactionDAO sudah diupdate query-nya untuk join tabel budget
         List<Transaction> list = trxDAO.getAllTransactions(currentUser.getId());
         
         for (Transaction t : list) {
             tableModel.addRow(new Object[]{
                 t.getId(), 
                 t.getTransactionDate(), 
-                t.getBudgetName(), // Nama Sumber Dana (misal: Gaji)
-                t.getCategory(),   // Keperluan (misal: Makan)
+                t.getCategoryName(),   // Nama kategori
                 t.getAmount(), 
                 t.getDescription()
             });
@@ -256,38 +216,33 @@ public class TransactionForm extends JFrame {
     }
 
     private void saveTransaction() {
-        // 1. Validasi Sumber Dana
-        BudgetOption source = (BudgetOption) cmbSumberDana.getSelectedItem();
-        if (source == null) {
-            JOptionPane.showMessageDialog(this, "Pilih Sumber Dana (Budget) dulu!");
-            return;
-        }
-
         try {
-            // 2. Ambil Data Form
+            // Ambil Data Form
             double amount = Double.parseDouble(txtAmount.getText());
-            
-            // Validasi Saldo Cukup
-            if (amount > source.saldo) {
-                JOptionPane.showMessageDialog(this, "Saldo di budget '" + source.name + "' tidak cukup!\nSisa: " + currencyFormat.format(source.saldo));
+            CategoryItem selectedCat = (CategoryItem) cmbKategori.getSelectedItem();
+            if (selectedCat == null) {
+                JOptionPane.showMessageDialog(this, "Pilih kategori dulu.");
+                return;
+            }
+            int sisa = Integer.parseInt(txtSisa.getText().isEmpty() ? "0" : txtSisa.getText());
+            if (amount > sisa) {
+                JOptionPane.showMessageDialog(this, "Nominal melebihi sisa saldo kategori.");
                 return;
             }
 
-            String expenseCategory = cmbKategoriPengeluaran.getSelectedItem().toString(); // Ambil text keperluan
             String desc = txtDesc.getText();
             java.util.Date spinDate = (java.util.Date) dateSpinner.getValue();
             
-            // 3. Buat Object Transaksi
+            // Buat Object Transaksi
             Transaction t = new Transaction();
             t.setUserId(currentUser.getId());
-            t.setBudgetId(source.id);        // PENTING: ID Sumber Dana
-            t.setCategory(expenseCategory);  // PENTING: Kategori Pengeluaran (Text)
+            t.setCategoryId(selectedCat.id);
+            t.setCategoryName(selectedCat.name);
             t.setAmount(amount);
             t.setDescription(desc);
             t.setTransactionDate(new Date(spinDate.getTime()));
-            t.setType("PENGELUARAN");
 
-            // 4. Simpan ke Database
+            // Simpan ke Database
             if (trxDAO.addTransaction(t)) {
                 JOptionPane.showMessageDialog(this, "Transaksi Berhasil Disimpan!");
                 resetForm();
@@ -319,11 +274,10 @@ public class TransactionForm extends JFrame {
         txtAmount.setText("");
         txtDesc.setText("");
         dateSpinner.setValue(new java.util.Date());
-        cmbKategoriPengeluaran.setSelectedIndex(0);
+        cmbKategori.setSelectedIndex(0);
         selectedTrxId = -1;
         
-        loadSumberDana(); // Refresh saldo di dropdown
         loadTableData();  // Refresh tabel
-        updateInfoSaldo();
+        updateSisaSaldo(); // Refresh sisa
     }
 }

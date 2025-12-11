@@ -12,118 +12,99 @@ import com.keuangan.model.Transaction;
 
 public class TransactionDAO {
 
+    // INSERT transaksi: user_id, category_id, amount, description, transaction_date
     public boolean addTransaction(Transaction trx) {
-        Connection conn = null;
-        // QUERY UPDATE: Masukkan budget_id
-        String sqlTrx = "INSERT INTO transactions (user_id, budget_id, amount, category, description, transaction_date, type, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)";
-        
-        // QUERY UPDATE: Kurangi saldo berdasarkan ID Budget (Sumber Dana)
-        String sqlBudget = "UPDATE budgets SET limit_amount = limit_amount - ? WHERE id = ?";
+        String sql = "INSERT INTO transactions (user_id, category_id, amount, description, transaction_date) VALUES (?, ?, ?, ?, ?)";
 
-        try {
-            conn = DatabaseConnection.getConnection();
-            conn.setAutoCommit(false); // Mulai Transaksi
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            // 1. Simpan Transaksi
-            try (PreparedStatement ps = conn.prepareStatement(sqlTrx)) {
-                ps.setInt(1, trx.getUserId());
-                ps.setInt(2, trx.getBudgetId()); // Simpan ID Sumber Dana
-                ps.setDouble(3, trx.getAmount());
-                ps.setString(4, trx.getCategory()); 
-                ps.setString(5, trx.getDescription());
-                ps.setDate(6, trx.getTransactionDate());
-                ps.setString(7, "PENGELUARAN");
-                ps.executeUpdate();
-            }
+            ps.setInt(1, trx.getUserId());
+            ps.setInt(2, trx.getCategoryId());
+            ps.setDouble(3, trx.getAmount());
+            ps.setString(4, trx.getDescription());
+            ps.setDate(5, trx.getTransactionDate());
 
-            // 2. Potong Saldo Budget
-            try (PreparedStatement ps = conn.prepareStatement(sqlBudget)) {
-                ps.setDouble(1, trx.getAmount());
-                ps.setInt(2, trx.getBudgetId()); // Potong dari ID ini
-                ps.executeUpdate();
-            }
-
-            conn.commit();
+            ps.executeUpdate();
             return true;
         } catch (SQLException e) {
-            try { if (conn != null) conn.rollback(); } catch (SQLException ex) {}
-            e.printStackTrace();
+            System.out.println("Error addTransaction: " + e.getMessage());
             return false;
-        } finally {
-            try { if (conn != null) conn.close(); } catch (Exception e) {}
         }
     }
 
     public boolean deleteTransaction(int trxId) {
-        Connection conn = null;
-        try {
-            conn = DatabaseConnection.getConnection();
-            conn.setAutoCommit(false);
-
-            // 1. Ambil data lama (termasuk budget_id)
-            String sqlGet = "SELECT amount, budget_id FROM transactions WHERE id = ?";
-            double amount = 0; int budgetId = 0;
-            
-            try (PreparedStatement ps = conn.prepareStatement(sqlGet)) {
-                ps.setInt(1, trxId);
-                ResultSet rs = ps.executeQuery();
-                if (rs.next()) {
-                    amount = rs.getDouble("amount");
-                    budgetId = rs.getInt("budget_id");
-                } else return false;
-            }
-
-            // 2. Refund Saldo ke Budget Asal
-            String sqlRefund = "UPDATE budgets SET limit_amount = limit_amount + ? WHERE id = ?";
-            try (PreparedStatement ps = conn.prepareStatement(sqlRefund)) {
-                ps.setDouble(1, amount);
-                ps.setInt(2, budgetId);
-                ps.executeUpdate();
-            }
-
-            // 3. Hapus Transaksi
-            try (PreparedStatement ps = conn.prepareStatement("DELETE FROM transactions WHERE id = ?")) {
-                ps.setInt(1, trxId);
-                ps.executeUpdate();
-            }
-
-            conn.commit();
-            return true;
+        String sql = "DELETE FROM transactions WHERE transaction_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, trxId);
+            return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            try { if (conn != null) conn.rollback(); } catch (SQLException ex) {}
+            System.out.println("Error deleteTransaction: " + e.getMessage());
             return false;
-        } finally {
-            try { if (conn != null) conn.close(); } catch (Exception e) {}
         }
     }
 
     public List<Transaction> getAllTransactions(int userId) {
         List<Transaction> list = new ArrayList<>();
-        // JOIN agar kita bisa lihat nama Budget (Sumber Dana) di tabel
-        String sql = "SELECT t.*, b.category as nama_sumber_dana " +
+        String sql = "SELECT t.transaction_id, t.user_id, t.category_id, t.amount, t.description, t.transaction_date, " +
+                     "       c.name AS category_name " +
                      "FROM transactions t " +
-                     "LEFT JOIN budgets b ON t.budget_id = b.id " +
-                     "WHERE t.user_id = ? ORDER BY t.transaction_date DESC";
-        
+                     "LEFT JOIN categories c ON t.category_id = c.category_id " +
+                     "WHERE t.user_id = ? " +
+                     "ORDER BY t.transaction_date DESC, t.transaction_id DESC";
+
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, userId);
             ResultSet rs = ps.executeQuery();
             while(rs.next()){
                 Transaction t = new Transaction(
-                    rs.getInt("id"), 
-                    rs.getInt("user_id"), 
-                    rs.getInt("budget_id"),
-                    rs.getString("nama_sumber_dana"), // Gaji, Bonus, dll
+                    rs.getInt("transaction_id"),
+                    rs.getInt("user_id"),
+                    rs.getInt("category_id"),
+                    rs.getString("category_name"),
                     rs.getDouble("amount"),
-                    rs.getString("category"),         // Makan, Bensin, dll
                     rs.getString("description"),
-                    rs.getDate("transaction_date"), 
-                    rs.getString("type")
+                    rs.getDate("transaction_date")
                 );
                 list.add(t);
             }
-        } catch(SQLException e){ e.printStackTrace(); }
+        } catch(SQLException e){
+            System.out.println("Error getAllTransactions: " + e.getMessage());
+        }
         return list;
+    }
+
+    // Hitung total budget per category
+    public int getTotalBudgetByCategoryId(int categoryId) {
+        String sql = "SELECT COALESCE(SUM(amount), 0) AS total_budget FROM budgets WHERE category_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, categoryId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt("total_budget");
+            }
+        } catch (SQLException e) {
+            System.out.println("Error getTotalBudgetByCategoryId: " + e.getMessage());
+        }
+        return 0;
+    }
+
+    // Hitung total pengeluaran per category
+    public int getTotalPengeluaranByCategoryId(int categoryId) {
+        String sql = "SELECT COALESCE(SUM(amount), 0) AS total_trx FROM transactions WHERE category_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, categoryId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt("total_trx");
+            }
+        } catch (SQLException e) {
+            System.out.println("Error getTotalPengeluaranByCategoryId: " + e.getMessage());
+        }
+        return 0;
     }
 }
