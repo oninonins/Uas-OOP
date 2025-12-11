@@ -1,5 +1,6 @@
 package com.keuangan.dao;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -345,5 +346,145 @@ public class TransactionDAO {
             System.out.println("Error getTopTransactionsCurrentMonth: " + e.getMessage());
         }
         return result;
+    }
+
+    // ------------------- LAPORAN -------------------
+    public List<Transaction> getTransactionsByDateRange(int userId, Date start, Date end) {
+        List<Transaction> list = new ArrayList<>();
+        String sql = "SELECT t.transaction_id, t.user_id, t.category_id, t.amount, t.description, t.transaction_date, "
+                   + "       c.name AS category_name "
+                   + "FROM transactions t "
+                   + "LEFT JOIN categories c ON t.category_id = c.category_id "
+                   + "WHERE t.user_id = ? AND t.transaction_date BETWEEN ? AND ? "
+                   + "ORDER BY t.transaction_date ASC";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            ps.setDate(2, start);
+            ps.setDate(3, end);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapTransaction(rs));
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("Error getTransactionsByDateRange: " + e.getMessage());
+        }
+        return list;
+    }
+
+    public List<Transaction> getTransactionsByMonth(int userId, int month, int year) {
+        List<Transaction> list = new ArrayList<>();
+        String sql = "SELECT t.transaction_id, t.user_id, t.category_id, t.amount, t.description, t.transaction_date, "
+                   + "       c.name AS category_name "
+                   + "FROM transactions t "
+                   + "LEFT JOIN categories c ON t.category_id = c.category_id "
+                   + "WHERE t.user_id = ? "
+                   + "  AND EXTRACT(MONTH FROM t.transaction_date) = ? "
+                   + "  AND EXTRACT(YEAR FROM t.transaction_date) = ? "
+                   + "ORDER BY t.transaction_date ASC";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            ps.setInt(2, month);
+            ps.setInt(3, year);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapTransaction(rs));
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("Error getTransactionsByMonth: " + e.getMessage());
+        }
+        return list;
+    }
+
+    public List<Transaction> getTransactionsByYear(int userId, int year) {
+        List<Transaction> list = new ArrayList<>();
+        String sql = "SELECT t.transaction_id, t.user_id, t.category_id, t.amount, t.description, t.transaction_date, "
+                   + "       c.name AS category_name "
+                   + "FROM transactions t "
+                   + "LEFT JOIN categories c ON t.category_id = c.category_id "
+                   + "WHERE t.user_id = ? "
+                   + "  AND EXTRACT(YEAR FROM t.transaction_date) = ? "
+                   + "ORDER BY t.transaction_date ASC";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            ps.setInt(2, year);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapTransaction(rs));
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("Error getTransactionsByYear: " + e.getMessage());
+        }
+        return list;
+    }
+
+    public BigDecimal getAverageWeeklyTotalBefore(int userId, Date startDate, int limitWeek) {
+        String sql = "SELECT AVG(total_mingguan) AS avg_total FROM ("
+                   + "  SELECT DATE_TRUNC('week', transaction_date) AS minggu, SUM(amount) AS total_mingguan "
+                   + "  FROM transactions "
+                   + "  WHERE user_id = ? AND transaction_date < ? "
+                   + "  GROUP BY minggu "
+                   + "  ORDER BY minggu DESC "
+                   + "  LIMIT ?"
+                   + ") x";
+        return queryAverageTotal(userId, startDate, limitWeek, sql);
+    }
+
+    public BigDecimal getAverageMonthlyTotalBefore(int userId, Date startDate, int limitMonth) {
+        String sql = "SELECT AVG(total_bulanan) AS avg_total FROM ("
+                   + "  SELECT DATE_TRUNC('month', transaction_date) AS bulan, SUM(amount) AS total_bulanan "
+                   + "  FROM transactions "
+                   + "  WHERE user_id = ? AND transaction_date < ? "
+                   + "  GROUP BY bulan "
+                   + "  ORDER BY bulan DESC "
+                   + "  LIMIT ?"
+                   + ") x";
+        return queryAverageTotal(userId, startDate, limitMonth, sql);
+    }
+
+    public BigDecimal getAverageYearlyTotalBefore(int userId, Date startDate, int limitYear) {
+        String sql = "SELECT AVG(total_tahunan) AS avg_total FROM ("
+                   + "  SELECT DATE_TRUNC('year', transaction_date) AS tahun, SUM(amount) AS total_tahunan "
+                   + "  FROM transactions "
+                   + "  WHERE user_id = ? AND transaction_date < ? "
+                   + "  GROUP BY tahun "
+                   + "  ORDER BY tahun DESC "
+                   + "  LIMIT ?"
+                   + ") x";
+        return queryAverageTotal(userId, startDate, limitYear, sql);
+    }
+
+    private BigDecimal queryAverageTotal(int userId, Date startDate, int limit, String sql) {
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            ps.setDate(2, startDate);
+            ps.setInt(3, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getBigDecimal("avg_total");
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("Error queryAverageTotal: " + e.getMessage());
+        }
+        return null;
+    }
+
+    private Transaction mapTransaction(ResultSet rs) throws SQLException {
+        return new Transaction(
+                rs.getInt("transaction_id"),
+                rs.getInt("user_id"),
+                rs.getInt("category_id"),
+                rs.getString("category_name"),
+                rs.getDouble("amount"),
+                rs.getString("description"),
+                rs.getDate("transaction_date")
+        );
     }
 }

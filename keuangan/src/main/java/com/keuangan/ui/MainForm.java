@@ -1,11 +1,23 @@
 package com.keuangan.ui;
 
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.GridLayout;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+
 import com.keuangan.model.User;
 import com.keuangan.view.login.LoginFrame;
-
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.*;
 
 public class MainForm extends JFrame {
 
@@ -63,6 +75,7 @@ public class MainForm extends JFrame {
 
         btnTransaksi.addActionListener(e -> new TransactionForm(currentUser).setVisible(true));
         btnStatistik.addActionListener(e -> StatisticsPanel.showInFrame(currentUser));
+        btnLaporan.addActionListener(e -> ReportFrame.showForUser(currentUser));
 
         contentPanel.add(btnTransaksi);
         contentPanel.add(btnBudget);
