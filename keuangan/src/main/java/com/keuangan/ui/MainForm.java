@@ -2,8 +2,6 @@ package com.keuangan.ui;
 
 import com.keuangan.model.User;
 import com.keuangan.view.login.LoginFrame;
-import com.keuangan.ui.BudgetForm;  // <- UPDATE di sini
-import com.keuangan.ui.TransactionForm;  // tetap jika class ini masih di folder UI
 
 import javax.swing.*;
 import java.awt.*;
@@ -64,6 +62,7 @@ public class MainForm extends JFrame {
         }
 
         btnTransaksi.addActionListener(e -> new TransactionForm(currentUser).setVisible(true));
+        btnStatistik.addActionListener(e -> StatisticsPanel.showInFrame(currentUser));
 
         contentPanel.add(btnTransaksi);
         contentPanel.add(btnBudget);

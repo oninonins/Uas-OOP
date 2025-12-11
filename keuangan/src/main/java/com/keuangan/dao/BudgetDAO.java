@@ -1,11 +1,18 @@
 package com.keuangan.dao;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
 
 import com.keuangan.config.DatabaseConnection;
 import com.keuangan.model.Budget;
+import com.keuangan.model.CategoryTotal;
 
 public class BudgetDAO {
 
@@ -104,5 +111,57 @@ public class BudgetDAO {
             System.out.println("Error delete budget: " + e.getMessage());
             return false;
         }
+    }
+
+    // Statistik: total budget per kategori dalam rentang tanggal
+    public List<CategoryTotal> getBudgetPerCategory(int userId, Date start, Date end) {
+        List<CategoryTotal> result = new ArrayList<>();
+        String sql = "SELECT c.category_id, c.name AS category_name, COALESCE(SUM(b.amount), 0) AS total_amount "
+                   + "FROM budgets b "
+                   + "JOIN categories c ON b.category_id = c.category_id "
+                   + "WHERE b.user_id = ? AND b.budget_date BETWEEN ? AND ? "
+                   + "GROUP BY c.category_id, c.name "
+                   + "ORDER BY total_amount DESC";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            ps.setDate(2, start);
+            ps.setDate(3, end);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    result.add(new CategoryTotal(
+                            rs.getInt("category_id"),
+                            rs.getString("category_name"),
+                            rs.getDouble("total_amount")
+                    ));
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("Error getBudgetPerCategory: " + e.getMessage());
+        }
+        return result;
+    }
+
+    // Statistik: map budget per kategori (untuk perbandingan realisasi)
+    public Map<Integer, Double> getBudgetByCategoryMap(int userId, Date start, Date end) {
+        Map<Integer, Double> result = new LinkedHashMap<>();
+        String sql = "SELECT category_id, COALESCE(SUM(amount), 0) AS total_amount "
+                   + "FROM budgets "
+                   + "WHERE user_id = ? AND budget_date BETWEEN ? AND ? "
+                   + "GROUP BY category_id";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            ps.setDate(2, start);
+            ps.setDate(3, end);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    result.put(rs.getInt("category_id"), rs.getDouble("total_amount"));
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("Error getBudgetByCategoryMap: " + e.getMessage());
+        }
+        return result;
     }
 }
