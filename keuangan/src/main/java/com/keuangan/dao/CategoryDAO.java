@@ -38,6 +38,19 @@ public class CategoryDAO {
         return getAllCategories();
     }
 
+    public boolean delete(int categoryId, int userId) {
+        String sql = "DELETE FROM categories WHERE category_id = ? AND user_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, categoryId);
+            pstmt.setInt(2, userId);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.out.println("Error delete category: " + e.getMessage());
+            return false;
+        }
+    }
+
     // Ambil kategori khusus user
     public List<Category> getAllByUser(int userId) {
         List<Category> list = new ArrayList<>();
