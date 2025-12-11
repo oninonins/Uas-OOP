@@ -1,15 +1,19 @@
 package com.keuangan.dao;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
 import com.keuangan.config.DatabaseConnection;
 import com.keuangan.model.User;
-import java.sql.*;
 
 public class UserDAO {
     
     // Method untuk cek login user
     public User login(String username, String password) {
         User user = null;
-        String query = "SELECT * FROM users WHERE username = ? AND password = ?";
+        String query = "SELECT user_id, username, password_hash FROM users WHERE username = ? AND password_hash = ?";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(query)) {
@@ -21,9 +25,9 @@ public class UserDAO {
             
             if (rs.next()) {
                 user = new User();
-                user.setId(rs.getInt("id"));
+                user.setId(rs.getInt("user_id"));
                 user.setUsername(rs.getString("username"));
-                user.setPassword(rs.getString("password"));
+                user.setPassword(rs.getString("password_hash"));
             }
             
             rs.close();
@@ -37,7 +41,7 @@ public class UserDAO {
     
     // Method untuk register user baru
     public boolean register(String username, String password) {
-        String query = "INSERT INTO users (username, password) VALUES (?, ?)";
+        String query = "INSERT INTO users (username, password_hash) VALUES (?, ?)";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(query)) {

@@ -76,3 +76,8 @@ CREATE INDEX idx_transactions_filter ON transactions(user_id, transaction_date);
 
 -- 2. Mempercepat join ke kategori (Untuk laporan pengeluaran per kategori)
 CREATE INDEX idx_transactions_category ON transactions(category_id);
+
+-- Insert data 
+INSERT INTO categories (category_id, user_id, name) VALUES
+(1, 1, 'Makan & Minum'),
+(2, 1, 'Lainnya');

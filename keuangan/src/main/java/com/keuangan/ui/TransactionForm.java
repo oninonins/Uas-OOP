@@ -216,11 +216,12 @@ public class TransactionForm extends JFrame {
     private void loadSumberDana() {
         cmbSumberDana.removeAllItems();
         // Mengambil semua budget user dari database
-        List<Budget> budgets = budgetDAO.getAllBudget(); 
+        List<Budget> budgets = budgetDAO.getAllBudget(currentUser.getId()); 
         
         for (Budget b : budgets) {
             // Masukkan ke dropdown sebagai object BudgetOption
-            cmbSumberDana.addItem(new BudgetOption(b.getUserId(), b.getBudgetId(), b.()));
+            String budgetName = "Budget #" + b.getBudgetId();
+            cmbSumberDana.addItem(new BudgetOption(b.getBudgetId(), budgetName, b.getAmount()));
         }
     }
     

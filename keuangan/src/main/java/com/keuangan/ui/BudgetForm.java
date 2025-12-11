@@ -1,27 +1,60 @@
 package com.keuangan.ui;
 
-import com.keuangan.model.User;
-import com.keuangan.config.DatabaseConnection;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.Date;
+import java.util.List;
 
-import javax.swing.*;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JScrollPane;
+import javax.swing.JSpinner;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.SpinnerDateModel;
 import javax.swing.table.DefaultTableModel;
 
-import java.sql.*;
-import java.util.Date;
+import com.keuangan.config.DatabaseConnection;
+import com.keuangan.dao.CategoryDAO;
+import com.keuangan.model.Category;
+import com.keuangan.model.User;
 
 public class BudgetForm extends JFrame {
 
     private User currentUser;
 
-    private JComboBox<String> cmbKategori;
+    private javax.swing.JComboBox<CategoryItem> cmbKategori;
     private JTextField txtJumlah;
     private JSpinner dateSpinner;
 
     private JTable table;
     private DefaultTableModel model;
 
+    private final CategoryDAO categoryDAO;
+
+    // Item untuk menyimpan ID kategori asli di ComboBox
+    private static class CategoryItem {
+        final int id;
+        final String name;
+
+        CategoryItem(int id, String name) {
+            this.id = id;
+            this.name = name;
+        }
+
+        @Override
+        public String toString() {
+            return name;
+        }
+    }
+
     public BudgetForm(User user) {
         this.currentUser = user;
+        this.categoryDAO = new CategoryDAO();
 
         setTitle("Manajemen Budget");
         setSize(620, 560);
@@ -46,15 +79,7 @@ public class BudgetForm extends JFrame {
         lblKategori.setBounds(50, 70, 150, 25);
         add(lblKategori);
 
-        cmbKategori = new JComboBox<>(new String[]{
-                "Makan & Minum",
-                "Transportasi",
-                "Belanja",
-                "Hiburan",
-                "Tagihan",
-                "Kesehatan",
-                "Lainnya"
-        });
+        cmbKategori = new javax.swing.JComboBox<>();
         cmbKategori.setBounds(200, 70, 200, 25);
         add(cmbKategori);
 
@@ -81,19 +106,19 @@ public class BudgetForm extends JFrame {
         JScrollPane scroll = new JScrollPane(table);
         scroll.setBounds(50, 220, 500, 300);
         add(scroll);
+
+        loadCategories();
     }
 
-    private int convertKategoriToId(String kategoriName) {
-        if (kategoriName == null) return 7;
-
-        switch (kategoriName) {
-            case "Makan & Minum": return 1;
-            case "Transportasi": return 2;
-            case "Belanja": return 3;
-            case "Hiburan": return 4;
-            case "Tagihan": return 5;
-            case "Kesehatan": return 6;
-            default: return 7;
+    private void loadCategories() {
+        cmbKategori.removeAllItems();
+        List<Category> categories = categoryDAO.getAllCategories();
+        if (categories.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Kategori belum tersedia di database. Tambahkan kategori terlebih dahulu.");
+            return;
+        }
+        for (Category c : categories) {
+            cmbKategori.addItem(new CategoryItem(c.getCategoryId(), c.getName()));
         }
     }
 
@@ -108,8 +133,14 @@ public class BudgetForm extends JFrame {
 
             PreparedStatement stmt = conn.prepareStatement(sql);
 
+            CategoryItem selected = (CategoryItem) cmbKategori.getSelectedItem();
+            if (selected == null) {
+                JOptionPane.showMessageDialog(this, "Pilih kategori yang valid.");
+                return;
+            }
+
             stmt.setInt(1, currentUser.getId());
-            stmt.setInt(2, convertKategoriToId(cmbKategori.getSelectedItem().toString()));
+            stmt.setInt(2, selected.id);
             stmt.setDouble(3, Double.parseDouble(txtJumlah.getText()));
             stmt.setDate(4, sqlDate);  // SIMPAN TANGGAL
 
