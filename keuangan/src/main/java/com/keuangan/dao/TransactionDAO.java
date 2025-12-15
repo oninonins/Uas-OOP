@@ -348,14 +348,18 @@ public class TransactionDAO {
         return result;
     }
 
-    // ------------------- LAPORAN -------------------
+    // ------------------- LAPORAN (Hanya Transaksi Pengeluaran) -------------------
+    /**
+     * Mendapatkan transaksi pengeluaran dalam rentang tanggal (untuk laporan mingguan)
+     * Hanya menampilkan transaksi dengan amount > 0 (pengeluaran)
+     */
     public List<Transaction> getTransactionsByDateRange(int userId, Date start, Date end) {
         List<Transaction> list = new ArrayList<>();
         String sql = "SELECT t.transaction_id, t.user_id, t.category_id, t.amount, t.description, t.transaction_date, "
                    + "       c.name AS category_name "
                    + "FROM transactions t "
                    + "LEFT JOIN categories c ON t.category_id = c.category_id "
-                   + "WHERE t.user_id = ? AND t.transaction_date BETWEEN ? AND ? "
+                   + "WHERE t.user_id = ? AND t.transaction_date BETWEEN ? AND ? AND t.amount > 0 "
                    + "ORDER BY t.transaction_date ASC";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -373,6 +377,10 @@ public class TransactionDAO {
         return list;
     }
 
+    /**
+     * Mendapatkan transaksi pengeluaran untuk bulan tertentu (untuk laporan bulanan)
+     * Hanya menampilkan transaksi dengan amount > 0 (pengeluaran)
+     */
     public List<Transaction> getTransactionsByMonth(int userId, int month, int year) {
         List<Transaction> list = new ArrayList<>();
         String sql = "SELECT t.transaction_id, t.user_id, t.category_id, t.amount, t.description, t.transaction_date, "
@@ -382,6 +390,7 @@ public class TransactionDAO {
                    + "WHERE t.user_id = ? "
                    + "  AND EXTRACT(MONTH FROM t.transaction_date) = ? "
                    + "  AND EXTRACT(YEAR FROM t.transaction_date) = ? "
+                   + "  AND t.amount > 0 "
                    + "ORDER BY t.transaction_date ASC";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -399,6 +408,10 @@ public class TransactionDAO {
         return list;
     }
 
+    /**
+     * Mendapatkan transaksi pengeluaran untuk tahun tertentu (untuk laporan tahunan)
+     * Hanya menampilkan transaksi dengan amount > 0 (pengeluaran)
+     */
     public List<Transaction> getTransactionsByYear(int userId, int year) {
         List<Transaction> list = new ArrayList<>();
         String sql = "SELECT t.transaction_id, t.user_id, t.category_id, t.amount, t.description, t.transaction_date, "
@@ -407,6 +420,7 @@ public class TransactionDAO {
                    + "LEFT JOIN categories c ON t.category_id = c.category_id "
                    + "WHERE t.user_id = ? "
                    + "  AND EXTRACT(YEAR FROM t.transaction_date) = ? "
+                   + "  AND t.amount > 0 "
                    + "ORDER BY t.transaction_date ASC";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {

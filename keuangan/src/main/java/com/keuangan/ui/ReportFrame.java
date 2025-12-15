@@ -1,9 +1,14 @@
 package com.keuangan.ui;
 
-import com.keuangan.dao.TransactionDAO;
-import com.keuangan.model.Transaction;
-import com.keuangan.model.User;
-import com.keuangan.util.FinancialStatusUtil;
+import java.awt.BorderLayout;
+import java.awt.CardLayout;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.List;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -18,20 +23,18 @@ import javax.swing.JTable;
 import javax.swing.SpinnerDateModel;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.table.DefaultTableModel;
-import java.awt.BorderLayout;
-import java.awt.CardLayout;
-import java.awt.FlowLayout;
-import java.awt.Font;
-import java.math.BigDecimal;
-import java.sql.Date;
-import java.time.LocalDate;
-import java.util.Arrays;
-import java.util.List;
+
+import com.keuangan.dao.BudgetDAO;
+import com.keuangan.dao.TransactionDAO;
+import com.keuangan.model.Transaction;
+import com.keuangan.model.User;
+import com.keuangan.util.FinancialStatusUtil;
 
 public class ReportFrame extends JFrame {
 
     private final User currentUser;
     private final TransactionDAO transactionDAO;
+    private final BudgetDAO budgetDAO;
 
     private JComboBox<String> cbPeriode;
     private JPanel cardPanel;
@@ -48,12 +51,15 @@ public class ReportFrame extends JFrame {
     private JTable table;
     private DefaultTableModel tableModel;
 
-    private JLabel lblTotalValue;
+    private JLabel lblTotalBudget;
+    private JLabel lblTotalPengeluaran;
+    private JLabel lblSisaDana;
     private JLabel lblStatusValue;
 
     public ReportFrame(User user) {
         this.currentUser = user;
         this.transactionDAO = new TransactionDAO();
+        this.budgetDAO = new BudgetDAO();
         initComponents();
     }
 
@@ -142,7 +148,7 @@ public class ReportFrame extends JFrame {
     }
 
     private JScrollPane buildTablePanel() {
-        String[] columns = {"Tanggal", "Kategori", "Deskripsi", "Jumlah", "Status"};
+        String[] columns = {"Tanggal", "Kategori", "Deskripsi", "Jenis", "Jumlah"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -154,16 +160,31 @@ public class ReportFrame extends JFrame {
     }
 
     private JPanel buildSummaryPanel() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 10));
-        panel.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10));
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 10));
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        lblTotalValue = new JLabel("0");
-        lblTotalValue.setFont(lblTotalValue.getFont().deriveFont(Font.BOLD, 14f));
+        // Total Budget
+        lblTotalBudget = new JLabel("0");
+        lblTotalBudget.setFont(lblTotalBudget.getFont().deriveFont(Font.BOLD, 14f));
+        
+        // Total Pengeluaran
+        lblTotalPengeluaran = new JLabel("0");
+        lblTotalPengeluaran.setFont(lblTotalPengeluaran.getFont().deriveFont(Font.BOLD, 14f));
+        
+        // Sisa Dana
+        lblSisaDana = new JLabel("0");
+        lblSisaDana.setFont(lblSisaDana.getFont().deriveFont(Font.BOLD, 14f));
+        
+        // Status
         lblStatusValue = new JLabel(FinancialStatusUtil.STATUS_NETRAL);
         lblStatusValue.setFont(lblStatusValue.getFont().deriveFont(Font.BOLD, 14f));
 
-        panel.add(new JLabel("Total Transaksi:"));
-        panel.add(lblTotalValue);
+        panel.add(new JLabel("Total Budget:"));
+        panel.add(lblTotalBudget);
+        panel.add(new JLabel("Total Pengeluaran:"));
+        panel.add(lblTotalPengeluaran);
+        panel.add(new JLabel("Sisa Dana:"));
+        panel.add(lblSisaDana);
         panel.add(new JLabel("Status:"));
         panel.add(lblStatusValue);
         return panel;
@@ -179,8 +200,8 @@ public class ReportFrame extends JFrame {
 
         try {
             List<Transaction> transactions;
-            BigDecimal avgHistoris;
-            BigDecimal totalPeriode;
+            double totalBudget;
+            BigDecimal totalPengeluaran;
 
             switch (periode) {
                 case "Mingguan": {
@@ -191,47 +212,55 @@ public class ReportFrame extends JFrame {
                         return;
                     }
                     transactions = transactionDAO.getTransactionsByDateRange(currentUser.getId(), start, end);
-                    totalPeriode = hitungTotal(transactions);
-                    avgHistoris = transactionDAO.getAverageWeeklyTotalBefore(currentUser.getId(), start, 10);
+                    totalPengeluaran = hitungTotal(transactions);
+                    totalBudget = budgetDAO.getTotalBudgetByDateRange(currentUser.getId(), start, end);
                     break;
                 }
                 case "Bulanan": {
                     int month = cbBulan.getSelectedIndex() + 1;
                     int year = (int) spTahunBulanan.getValue();
-                    LocalDate startLocal = LocalDate.of(year, month, 1);
-                    Date start = Date.valueOf(startLocal);
                     transactions = transactionDAO.getTransactionsByMonth(currentUser.getId(), month, year);
-                    totalPeriode = hitungTotal(transactions);
-                    avgHistoris = transactionDAO.getAverageMonthlyTotalBefore(currentUser.getId(), start, 3);
+                    totalPengeluaran = hitungTotal(transactions);
+                    totalBudget = budgetDAO.getTotalBudgetByMonth(currentUser.getId(), month, year);
                     break;
                 }
                 default: { // Tahunan
                     int year = (int) spTahunTahunan.getValue();
-                    LocalDate startLocal = LocalDate.of(year, 1, 1);
-                    Date start = Date.valueOf(startLocal);
                     transactions = transactionDAO.getTransactionsByYear(currentUser.getId(), year);
-                    totalPeriode = hitungTotal(transactions);
-                    avgHistoris = transactionDAO.getAverageYearlyTotalBefore(currentUser.getId(), start, 3);
+                    totalPengeluaran = hitungTotal(transactions);
+                    totalBudget = budgetDAO.getTotalBudgetByYear(currentUser.getId(), year);
                     break;
                 }
             }
 
-            if (transactions.isEmpty()) {
-                tableModel.setRowCount(0);
-                lblTotalValue.setText("0");
-                lblStatusValue.setText(FinancialStatusUtil.STATUS_NETRAL);
-                JOptionPane.showMessageDialog(this, "Tidak ada data");
-                return;
-            }
-
-            String status = FinancialStatusUtil.hitungStatusKeuangan(totalPeriode, avgHistoris);
-            isiTabel(transactions, status);
-            lblTotalValue.setText(totalPeriode.toPlainString());
+            // Hitung sisa dana
+            BigDecimal budgetBigDecimal = BigDecimal.valueOf(totalBudget);
+            BigDecimal sisaDana = budgetBigDecimal.subtract(totalPengeluaran);
+            
+            // Hitung status berdasarkan persentase
+            String status = FinancialStatusUtil.hitungStatusKeuangan(totalPengeluaran, budgetBigDecimal);
+            
+            // Update tabel
+            isiTabel(transactions);
+            
+            // Update summary labels
+            lblTotalBudget.setText(formatRupiah(budgetBigDecimal));
+            lblTotalPengeluaran.setText(formatRupiah(totalPengeluaran));
+            lblSisaDana.setText(formatRupiah(sisaDana));
             lblStatusValue.setText(status);
+
+            if (transactions.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Tidak ada data transaksi pengeluaran untuk periode ini.");
+            }
 
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Gagal memuat laporan: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
         }
+    }
+    
+    private String formatRupiah(BigDecimal amount) {
+        return "Rp " + amount.toPlainString();
     }
 
     private BigDecimal hitungTotal(List<Transaction> list) {
@@ -242,15 +271,15 @@ public class ReportFrame extends JFrame {
         return total;
     }
 
-    private void isiTabel(List<Transaction> list, String status) {
+    private void isiTabel(List<Transaction> list) {
         tableModel.setRowCount(0);
         for (Transaction t : list) {
             tableModel.addRow(new Object[]{
                     t.getTransactionDate(),
                     t.getCategoryName() != null ? t.getCategoryName() : "-",
-                    t.getDescription(),
-                    t.getAmount(),
-                    status
+                    t.getDescription() != null ? t.getDescription() : "-",
+                    "Keluar",
+                    t.getAmount()
             });
         }
     }

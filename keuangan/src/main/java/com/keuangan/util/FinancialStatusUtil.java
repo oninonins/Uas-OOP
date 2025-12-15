@@ -1,6 +1,7 @@
 package com.keuangan.util;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 public class FinancialStatusUtil {
 
@@ -8,31 +9,30 @@ public class FinancialStatusUtil {
     public static final String STATUS_NETRAL = "Netral";
     public static final String STATUS_STABIL = "Stabil";
 
-    public static final BigDecimal BOROS_MULTIPLIER = new BigDecimal("1.20");
-    public static final BigDecimal STABIL_MULTIPLIER = new BigDecimal("0.80");
-
     private FinancialStatusUtil() {
-        // utility
+        // utility class
     }
 
-    public static String hitungStatusKeuangan(BigDecimal totalPeriode, BigDecimal rataRataHistoris) {
-        if (totalPeriode == null) {
+    public static String hitungStatusKeuangan(BigDecimal totalPengeluaran, BigDecimal totalBudget) {
+        if (totalPengeluaran == null) {
+            totalPengeluaran = BigDecimal.ZERO;
+        }
+        if (totalBudget == null || totalBudget.compareTo(BigDecimal.ZERO) == 0) {
             return STATUS_NETRAL;
         }
 
-        if (rataRataHistoris == null || BigDecimal.ZERO.compareTo(rataRataHistoris) == 0) {
-            return STATUS_NETRAL;
-        }
+        // Hitung persentase: (pengeluaran / budget) * 100
+        BigDecimal persentase = totalPengeluaran
+                .multiply(new BigDecimal("100"))
+                .divide(totalBudget, 2, RoundingMode.HALF_UP);
 
-        BigDecimal batasBoros = rataRataHistoris.multiply(BOROS_MULTIPLIER);
-        BigDecimal batasStabil = rataRataHistoris.multiply(STABIL_MULTIPLIER);
-
-        if (totalPeriode.compareTo(batasBoros) > 0) {
-            return STATUS_BOROS;
-        } else if (totalPeriode.compareTo(batasStabil) < 0) {
-            return STATUS_STABIL;
+        // Kategori berdasarkan persentase
+        if (persentase.compareTo(new BigDecimal("80")) > 0) {
+            return STATUS_BOROS;  // > 80%
+        } else if (persentase.compareTo(new BigDecimal("50")) > 0) {
+            return STATUS_NETRAL; // 51% - 80%
         } else {
-            return STATUS_NETRAL;
+            return STATUS_STABIL; // 0% - 50%
         }
     }
 }

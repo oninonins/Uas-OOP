@@ -6,9 +6,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.LinkedHashMap;
 
 import com.keuangan.config.DatabaseConnection;
 import com.keuangan.model.Budget;
@@ -163,5 +163,78 @@ public class BudgetDAO {
             System.out.println("Error getBudgetByCategoryMap: " + e.getMessage());
         }
         return result;
+    }
+
+    // ------------------- LAPORAN: Total Budget Berdasarkan Periode -------------------
+    
+    /**
+     * Mendapatkan total budget dalam rentang tanggal (untuk laporan mingguan)
+     */
+    public double getTotalBudgetByDateRange(int userId, Date start, Date end) {
+        String sql = "SELECT COALESCE(SUM(amount), 0) AS total_budget "
+                   + "FROM budgets "
+                   + "WHERE user_id = ? AND budget_date BETWEEN ? AND ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            ps.setDate(2, start);
+            ps.setDate(3, end);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getDouble("total_budget");
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("Error getTotalBudgetByDateRange: " + e.getMessage());
+        }
+        return 0.0;
+    }
+
+    /**
+     * Mendapatkan total budget untuk bulan tertentu (untuk laporan bulanan)
+     */
+    public double getTotalBudgetByMonth(int userId, int month, int year) {
+        String sql = "SELECT COALESCE(SUM(amount), 0) AS total_budget "
+                   + "FROM budgets "
+                   + "WHERE user_id = ? "
+                   + "  AND EXTRACT(MONTH FROM budget_date) = ? "
+                   + "  AND EXTRACT(YEAR FROM budget_date) = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            ps.setInt(2, month);
+            ps.setInt(3, year);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getDouble("total_budget");
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("Error getTotalBudgetByMonth: " + e.getMessage());
+        }
+        return 0.0;
+    }
+
+    /**
+     * Mendapatkan total budget untuk tahun tertentu (untuk laporan tahunan)
+     */
+    public double getTotalBudgetByYear(int userId, int year) {
+        String sql = "SELECT COALESCE(SUM(amount), 0) AS total_budget "
+                   + "FROM budgets "
+                   + "WHERE user_id = ? "
+                   + "  AND EXTRACT(YEAR FROM budget_date) = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            ps.setInt(2, year);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getDouble("total_budget");
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("Error getTotalBudgetByYear: " + e.getMessage());
+        }
+        return 0.0;
     }
 }
