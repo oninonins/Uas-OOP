@@ -26,7 +26,7 @@ public class FinancialStatusUtil {
                 .multiply(new BigDecimal("100"))
                 .divide(totalBudget, 2, RoundingMode.HALF_UP);
 
-        // Kategori berdasarkan persentasesdan budget
+        // Kategori berdasarkan persentase
         if (persentase.compareTo(new BigDecimal("80")) > 0) {
             return STATUS_BOROS;  // > 80%
         } else if (persentase.compareTo(new BigDecimal("50")) > 0) {
